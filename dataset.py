@@ -2,12 +2,10 @@ import torch
 from torchvision import transforms
 import random
 
-class RotationDataset(torch.utils.data.Dataset,):
-    """Dataset that generates rotated versions of images with rotation labels (0°, 90°)."""
+class RotationDataset(torch.utils.data.Dataset):
     def __init__(self, dataset, rotations):
         self.dataset = dataset
         self.rotations = rotations
-        self.rotations_label = {element: index for index, element in enumerate(rotations)}
 
     def __len__(self):
         return len(self.dataset)
@@ -15,8 +13,12 @@ class RotationDataset(torch.utils.data.Dataset,):
     def __getitem__(self, idx):
         image, _ = self.dataset[idx]
 
-        rotation_angle = random.choice(self.rotations)
-        rotated_image = transforms.functional.rotate(image, rotation_angle)
-        rotation_label=self.rotations_label[rotation_angle]
+        rotated_images = []
+        rotation_labels = []
 
-        return rotated_image, rotation_label
+        for rotation in self.rotations:
+            rotated_image = transforms.functional.rotate(image, rotation)
+            rotated_images.append(rotated_image)
+            rotation_labels.append(self.rotations.index(rotation))
+
+        return rotated_images, rotation_labels

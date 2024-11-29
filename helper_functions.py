@@ -122,3 +122,11 @@ def train_convnet(
               f"Validation Loss: {average_val_loss:.4f}, Validation Accuracy: {val_accuracy:.2f}%")
 
     writer.close()
+
+def rotation_collate(batch):
+    all_images = []
+    all_labels = []
+    for images, labels in batch:
+        all_images.extend(images)
+        all_labels.extend(labels)
+    return torch.stack(all_images), torch.tensor(all_labels)
