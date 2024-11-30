@@ -23,7 +23,6 @@ def _get_next_run_index(log_dir):
         return 0
     existing_runs = [int(f.split('_')[-1]) for f in os.listdir(log_dir) if f.startswith('run_') and f.split('_')[-1].isdigit()]
     return max(existing_runs, default=-1) + 1
-
 def train_convnet(
     model: torch.nn.Module, 
     train_loader, 
@@ -32,8 +31,20 @@ def train_convnet(
     optimizer, 
     learning_rate_scheduler, 
     num_epochs=5, 
-    filename='model.pth'
+    filename='model.pth',
+    num_frozen_blocks=0  # New parameter for freezing blocks
 ):
+    # Freeze the first `num_frozen_blocks` layers
+    print(num_frozen_blocks)
+    if num_frozen_blocks > 0:
+        print(f"Freezing the first {num_frozen_blocks} layers...")
+        frozen_layers = list(model.blocks)[:num_frozen_blocks]
+        print(frozen_layers)
+        for layer in frozen_layers:
+            print(f"Freezing {layer.__class__.__name__}")
+            for param in layer.parameters():
+                param.requires_grad = False
+
     # Determine the logging directory and next run index
     base_log_dir = f"tensorboard_logs/{os.path.splitext(os.path.basename(filename))[0]}"
     k = _get_next_run_index(base_log_dir)
@@ -79,6 +90,12 @@ def train_convnet(
         writer.add_scalar("Loss/Train", average_train_loss, epoch)
         writer.add_scalar("Accuracy/Train", train_accuracy, epoch)
 
+        # Log gradient norms for each layer
+        for name, param in model.named_parameters():
+            if param.grad is not None:
+                grad_norm = param.grad.norm().item()
+                writer.add_scalar(f"Gradients/{name}", grad_norm, epoch)
+
         # Validation phase
         model.eval()
         val_loss = 0
@@ -107,21 +124,24 @@ def train_convnet(
         # Log validation metrics for the epoch
         writer.add_scalar("Loss/Validation", average_val_loss, epoch)
         writer.add_scalar("Accuracy/Validation", val_accuracy, epoch)
+        writer.add_scalar("Learning Rate", optimizer.param_groups[0]['lr'], epoch)
 
         # Save the model if validation accuracy improves
         if val_accuracy > best_accuracy:
             best_accuracy = val_accuracy
-            torch.save(model.state_dict(),os.path.join('models', filename))
+            torch.save(model.state_dict(), os.path.join('models', filename))
 
         # Adjust learning rate
         learning_rate_scheduler.step()
 
         # Print epoch summary
-        print(f"Epoch [{epoch+1}/{num_epochs}] - "
-              f"Train Loss: {average_train_loss:.4f}, Train Accuracy: {train_accuracy:.2f}%, "
-              f"Validation Loss: {average_val_loss:.4f}, Validation Accuracy: {val_accuracy:.2f}%")
+        print(f"Epoch [{epoch+1}/{num_epochs}] - \n"
+              f"Train Loss: {average_train_loss:.4f}, Train Accuracy: {train_accuracy:.2f}%, \n"
+              f"Validation Loss: {average_val_loss:.4f}, Validation Accuracy: {val_accuracy:.2f}%\n")
 
     writer.close()
+
+
 
 def rotation_collate(batch):
     all_images = []
