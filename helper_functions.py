@@ -32,16 +32,14 @@ def train_convnet(
     learning_rate_scheduler, 
     num_epochs=5, 
     filename='model.pth',
-    num_frozen_blocks=0  # New parameter for freezing blocks
+    num_frozen_blocks=0, # New parameter for freezing blocks
+    freezed_epochs=0
 ):
     # Freeze the first `num_frozen_blocks` layers
     print(num_frozen_blocks)
     if num_frozen_blocks > 0:
-        print(f"Freezing the first {num_frozen_blocks} layers...")
         frozen_layers = list(model.blocks)[:num_frozen_blocks]
-        print(frozen_layers)
         for layer in frozen_layers:
-            print(f"Freezing {layer.__class__.__name__}")
             for param in layer.parameters():
                 param.requires_grad = False
 
@@ -56,6 +54,11 @@ def train_convnet(
     
     best_accuracy = 0
     for epoch in range(num_epochs):
+        if num_frozen_blocks > 0 and epoch > freezed_epochs:
+            for layer in frozen_layers:
+                for param in layer.parameters():
+                    param.requires_grad = True
+        
         # Training phase
         model.train()
         total_loss = 0
