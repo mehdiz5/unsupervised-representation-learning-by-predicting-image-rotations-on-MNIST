@@ -24,6 +24,4 @@ To get started with this project:
 2. Install the required dependencies (list them here or refer to a requirements.txt file)
 3. Run the Jupyter notebooks in the following order:
    - train_baseline.ipynb
-   - projet_deep.ipynb
-   - batch_corrected.ipynb
    - RotNetV_any.ipynb
